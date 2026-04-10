@@ -1,0 +1,36 @@
+name: Update TV3 Live Source
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'  # 每 20 分钟跑一次
+  workflow_dispatch:        # 允许手动运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install requests playwright
+          playwright install --with-deps chromium
+
+      - name: Run fetch script
+        run: python fetch_tv3.py
+
+      - name: Commit and push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add tv3.m3u
+          git commit -m "Auto update TV3 source $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
